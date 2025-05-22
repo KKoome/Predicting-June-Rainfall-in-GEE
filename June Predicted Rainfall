@@ -1,0 +1,42 @@
+var kenya = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')
+              .filter(ee.Filter.eq('country_na', 'Kenya'));
+
+var chirps = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
+              .filter(ee.Filter.calendarRange(6,6,'month'))  // June only
+              .filterDate('2000-01-01', '2024-12-31')
+              .filterBounds(kenya);
+
+var years = ee.List.sequence(2000, 2024);
+var monthlyTotals = ee.ImageCollection(
+  years.map(function(year) {
+    var start = ee.Date.fromYMD(year, 6, 1);
+    var end = start.advance(1, 'month');
+    var monthlyRain = chirps
+      .filterDate(start, end)
+      .sum()
+      .set('year', year);
+    return monthlyRain;
+  })
+);
+
+var juneMean = monthlyTotals.mean().clip(kenya);
+
+var visParams = {
+  min: 0,
+  max: 300,
+  palette: ['ffffff', 'a6cee3', '1f78b4', '33a02c', 'ff7f00', '6a3d9a']
+};
+
+Map.centerObject(kenya, 6);
+Map.addLayer(juneMean, visParams, 'Predicted June 2025 Rainfall (Climatology)');
+Map.addLayer(kenya.style({color: 'black', fillColor: '00000000'}), {}, 'Kenya Boundary');
+
+Export.image.toDrive({
+  image: juneMean,
+  description: 'Predicted_June2025_Rainfall',
+  folder: 'GEE_Exports',
+  fileNamePrefix: 'Kenya_June2025_Rainfall',
+  region: kenya.geometry(),
+  scale: 5000,
+  maxPixels: 1e13
+});
