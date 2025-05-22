@@ -1,3 +1,5 @@
+#This prediction uses the mean average of the month of June from 2000 to 2024
+
 var kenya = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017')
               .filter(ee.Filter.eq('country_na', 'Kenya'));
 
